@@ -15,7 +15,7 @@ use crate::{
         object_environment_record::ObjectEnvironmentRecord,
     },
     object::GcObject,
-    BoaProfiler, Value,
+    BoaProfiler, Context, Value,
 };
 use gc::{Gc, GcCell};
 use rustc_hash::{FxHashMap, FxHashSet};
@@ -68,16 +68,7 @@ impl fmt::Display for EnvironmentError {
     }
 }
 
-impl error::Error for EnvironmentError {
-    fn description(&self) -> &str {
-        &self.details
-    }
-
-    fn cause(&self) -> Option<&dyn error::Error> {
-        // Generic error, underlying cause isn't tracked.
-        None
-    }
-}
+impl error::Error for EnvironmentError {}
 
 impl LexicalEnvironment {
     pub fn new(global: Value) -> Self {
@@ -91,23 +82,28 @@ impl LexicalEnvironment {
         lexical_env.environment_stack.push_back(global_env);
         lexical_env
     }
+}
 
-    pub fn push(&mut self, env: Environment) {
+// TODO: move implementation to a better place.
+impl Context {
+    pub fn push_environment(&mut self, env: Environment) {
         let current_env: Environment = self.get_current_environment().clone();
         env.borrow_mut().set_outer_environment(current_env);
-        self.environment_stack.push_back(env);
+        self.realm.environment.environment_stack.push_back(env);
     }
 
-    pub fn pop(&mut self) -> Option<Environment> {
-        self.environment_stack.pop_back()
+    pub fn pop_environment(&mut self) -> Option<Environment> {
+        self.realm.environment.environment_stack.pop_back()
     }
 
     pub fn environments(&self) -> impl Iterator<Item = &Environment> {
-        self.environment_stack.iter().rev()
+        self.realm.environment.environment_stack.iter().rev()
     }
 
     pub fn get_global_object(&self) -> Option<Value> {
-        self.environment_stack
+        self.realm
+            .environment
+            .environment_stack
             .get(0)
             .expect("")
             .borrow()
@@ -193,7 +189,9 @@ impl LexicalEnvironment {
             env
         } else {
             // global_env doesn't need has_binding to be satisfied in non strict mode
-            self.environment_stack
+            self.realm
+                .environment
+                .environment_stack
                 .get(0)
                 .expect("Environment stack underflow")
         };
@@ -210,7 +208,9 @@ impl LexicalEnvironment {
             env
         } else {
             // global_env doesn't need has_binding to be satisfied in non strict mode
-            self.environment_stack
+            self.realm
+                .environment
+                .environment_stack
                 .get(0)
                 .expect("Environment stack underflow")
         };
@@ -220,7 +220,9 @@ impl LexicalEnvironment {
     /// get_current_environment_ref is used when you only need to borrow the environment
     /// (you only need to add a new variable binding, or you want to fetch a value)
     pub fn get_current_environment_ref(&self) -> &Environment {
-        self.environment_stack
+        self.realm
+            .environment
+            .environment_stack
             .back()
             .expect("Could not get current environment")
     }
@@ -228,7 +230,9 @@ impl LexicalEnvironment {
     /// When neededing to clone an environment (linking it with another environnment)
     /// cloning is more suited. The GC will remove the env once nothing is linking to it anymore
     pub fn get_current_environment(&mut self) -> &mut Environment {
-        self.environment_stack
+        self.realm
+            .environment
+            .environment_stack
             .back_mut()
             .expect("Could not get mutable reference to back object")
     }

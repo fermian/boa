@@ -211,7 +211,8 @@ impl StandardObjects {
 #[derive(Debug)]
 pub struct Context {
     /// realm holds both the global object and the environment
-    realm: Realm,
+    // TODO: restrict pub
+    pub(crate) realm: Realm,
 
     /// The current executor.
     executor: Interpreter,
@@ -504,7 +505,7 @@ impl Context {
             flags,
             body: RcStatementList::from(body.into()),
             params,
-            environment: self.realm.environment.get_current_environment().clone(),
+            environment: self.get_current_environment().clone(),
         };
 
         let new_func = Object::function(func, function_prototype);
@@ -587,9 +588,7 @@ impl Context {
                         let array = Value::new_object(self);
                         array.set_data(ObjectData::Array);
                         array.as_object().expect("object").set_prototype_instance(
-                            self.realm()
-                                .environment
-                                .get_binding_value("Array")
+                            self.get_binding_value("Array")
                                 .expect("Array was not initialized")
                                 .get_field(PROTOTYPE, self)?,
                         );
@@ -622,9 +621,7 @@ impl Context {
     pub(crate) fn set_value(&mut self, node: &Node, value: Value) -> Result<Value> {
         match node {
             Node::Identifier(ref name) => {
-                self.realm
-                    .environment
-                    .set_mutable_binding(name.as_ref(), value.clone(), true)
+                self.set_mutable_binding(name.as_ref(), value.clone(), true)
                     .map_err(|e| e.to_error(self))?;
                 Ok(value)
             }

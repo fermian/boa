@@ -42,20 +42,18 @@ impl Executable for VarDeclList {
                 Some(v) => v.run(context)?,
                 None => Value::undefined(),
             };
-            let environment = &mut context.realm_mut().environment;
 
-            if environment.has_binding(var.name()) {
+            if context.has_binding(var.name()) {
                 if var.init().is_some() {
-                    environment
+                    context
                         .set_mutable_binding(var.name(), val, true)
                         .map_err(|e| e.to_error(context))?;
                 }
             } else {
-                environment
+                context
                     .create_mutable_binding(var.name().to_owned(), false, VariableScope::Function)
                     .map_err(|e| e.to_error(context))?;
-                let environment = &mut context.realm_mut().environment;
-                environment
+                context
                     .initialize_binding(var.name(), val)
                     .map_err(|e| e.to_error(context))?;
             }
