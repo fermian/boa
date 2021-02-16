@@ -45,17 +45,15 @@ impl Executable for VarDeclList {
 
             if context.has_binding(var.name()) {
                 if var.init().is_some() {
-                    context
-                        .set_mutable_binding(var.name(), val, true)
-                        .map_err(|e| e.to_error(context))?;
+                    context.set_mutable_binding(var.name(), val, true)?;
                 }
             } else {
-                context
-                    .create_mutable_binding(var.name().to_owned(), false, VariableScope::Function)
-                    .map_err(|e| e.to_error(context))?;
-                context
-                    .initialize_binding(var.name(), val)
-                    .map_err(|e| e.to_error(context))?;
+                context.create_mutable_binding(
+                    var.name().to_owned(),
+                    false,
+                    VariableScope::Function,
+                )?;
+                context.initialize_binding(var.name(), val)?;
             }
         }
         Ok(Value::undefined())

@@ -8,11 +8,10 @@
 //!
 //! There are 5 Environment record kinds. They all have methods in common, these are implemented as a the `EnvironmentRecordTrait`
 //!
-use super::ErrorKind;
 use crate::{
     environment::lexical_environment::{Environment, EnvironmentType},
     gc::{Finalize, Trace},
-    Value,
+    Context, Result, Value,
 };
 use std::fmt::Debug;
 
@@ -36,18 +35,25 @@ pub trait EnvironmentRecordTrait: Debug + Trace + Finalize {
         name: String,
         deletion: bool,
         allow_name_reuse: bool,
-    ) -> Result<(), ErrorKind>;
+        context: &mut Context,
+    ) -> Result<()>;
 
     /// Create a new but uninitialized immutable binding in an Environment Record.
     /// The String value N is the text of the bound name.
     /// If strict is true then attempts to set it after it has been initialized will always throw an exception,
     /// regardless of the strict mode setting of operations that reference that binding.
-    fn create_immutable_binding(&mut self, name: String, strict: bool) -> Result<(), ErrorKind>;
+    fn create_immutable_binding(
+        &mut self,
+        name: String,
+        strict: bool,
+        context: &mut Context,
+    ) -> Result<()>;
 
     /// Set the value of an already existing but uninitialized binding in an Environment Record.
     /// The String value N is the text of the bound name.
     /// V is the value for the binding and is a value of any ECMAScript language type.
-    fn initialize_binding(&mut self, name: &str, value: Value) -> Result<(), ErrorKind>;
+    fn initialize_binding(&mut self, name: &str, value: Value, context: &mut Context)
+        -> Result<()>;
 
     /// Set the value of an already existing mutable binding in an Environment Record.
     /// The String value `name` is the text of the bound name.
@@ -58,13 +64,14 @@ pub trait EnvironmentRecordTrait: Debug + Trace + Finalize {
         name: &str,
         value: Value,
         strict: bool,
-    ) -> Result<(), ErrorKind>;
+        context: &mut Context,
+    ) -> Result<()>;
 
     /// Returns the value of an already existing binding from an Environment Record.
     /// The String value N is the text of the bound name.
     /// S is used to identify references originating in strict mode code or that
     /// otherwise require strict mode reference semantics.
-    fn get_binding_value(&self, name: &str, strict: bool) -> Result<Value, ErrorKind>;
+    fn get_binding_value(&self, name: &str, strict: bool, context: &mut Context) -> Result<Value>;
 
     /// Delete a binding from an Environment Record.
     /// The String value name is the text of the bound name.
@@ -77,7 +84,7 @@ pub trait EnvironmentRecordTrait: Debug + Trace + Finalize {
     fn has_this_binding(&self) -> bool;
 
     /// Return the `this` binding from the environment
-    fn get_this_binding(&self) -> Result<Value, ErrorKind>;
+    fn get_this_binding(&self, context: &mut Context) -> Result<Value>;
 
     /// Determine if an Environment Record establishes a super method binding.
     /// Return true if it does and false if it does not.
